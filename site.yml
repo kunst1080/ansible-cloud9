@@ -1,0 +1,48 @@
+- hosts: all
+  remote_user: "{{ user }}"
+  vars:
+    - user: user
+    - user_home: "/home/{{user}}"
+    - c9_home: "{{ user_home }}/c9sdk"
+    - port: 8080
+    - workspace: "{{user_home}}/work"
+    
+  tasks:
+    - name: install tools
+      become: true
+      apt:
+        name: "{{item}}"
+        state: present
+        update_cache: yes
+      with_items:
+        - git
+        - build-essential
+        - nodejs-legacy
+        - npm
+
+    - name: install npm forever
+      become: true
+      npm:
+        name: forever
+        global: yes
+
+    - name: git clone Cloud9
+      git:
+        repo: https://github.com/c9/core.git
+        dest: "{{ c9_home }}"
+
+    - name: install Cloud9
+      shell: "./scripts/install-sdk.sh"
+      args:
+        chdir: "{{ c9_home }}"
+
+    - name: mkdir workspace
+      file:
+        path: "{{ workspace }}"
+        state: directory
+
+    - name: start Cloud9
+      shell: "forever start server.js -a -p {{ port }} -w {{ workspace }}"
+      args:
+        chdir: "{{ c9_home }}"
+
